@@ -1,152 +1,455 @@
-<!DOCTYPE html>
+<!DOCTYPE html>  
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>hws的GitHub 音乐盒</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>hws 的 GitHub 音乐盒</title>
     <style>
-        body {font-family: Arial, Helvetica, sans-serif; margin:0; padding:0; background:#f5f5f5;}
-        .container {max-width:960px; margin:auto; padding:20px;}
-        h1 {text-align:center; color:#333;}
-        .search-box {margin-bottom:20px; text-align:center;}
-        .search-box input {width:80%; padding:8px; font-size:16px;}
-        .list {display:flex; flex-wrap:wrap; gap:15px;}
-        .song-card {background:#fff; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,.1);
-                    width:calc(33% - 10px); padding:10px; box-sizing:border-box;}
-        .song-card h3 {margin:0 0 5px; font-size:16px; color:#222; word-break:break-all;}
-        .song-card button {margin-top:5px; padding:5px 10px; font-size:14px;}
-        .playlist {margin-top:30px; background:#fff; padding:15px; border-radius:6px;}
-        .playlist h2 {margin-top:0;}
-        .playlist ul {list-style:none; padding:0; margin:0;}
-        .playlist li {padding:8px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;}
-        .playlist li button {font-size:12px; padding:3px 6px;}
-        audio {width:100%; margin-top:20px;}
-        @media (max-width:768px){
-            .song-card{width:calc(50% - 10px);}
+        :root{
+            --bg:#f5f7fb;
+            --card:#ffffff;
+            --muted:#6b7280;
+            --accent:#2563eb;
+            --accent-2:#0ea5a4;
+            --shadow: 0 6px 18px rgba(20,25,30,0.06);
+            --radius:10px;
         }
-        @media (max-width:480px){
-            .song-card{width:100%;}
-        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:Inter, Arial, sans-serif;background:var(--bg);color:#111827}
+        .container{max-width:1080px;margin:28px auto;padding:20px}
+        header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}
+        h1{margin:0;font-size:20px;color:#0f172a}
+        .controls{display:flex;gap:10px;align-items:center}
+        .search{display:flex;gap:8px;align-items:center}
+        input[type="search"]{width:320px;max-width:40vw;padding:8px 12px;border-radius:8px;border:1px solid #e6e9ef;background:#fff}
+        .btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border-radius:8px;border:1px solid #e6e9ef;cursor:pointer;color:#0f172a}
+        .btn.primary{background:linear-gradient(90deg,var(--accent),#3b82f6);color:#fff;border:0}
+        .main{display:grid;grid-template-columns:1fr 340px;gap:18px}
+        @media (max-width:980px){.main{grid-template-columns:1fr}}
+        .list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+        @media (max-width:900px){.list{grid-template-columns:repeat(2,1fr)}}
+        @media (max-width:520px){.list{grid-template-columns:1fr}}
+        .song-card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;min-height:88px}
+        .song-title{font-size:14px;color:#0f172a;margin:0;word-break:break-word}
+        .song-meta{font-size:12px;color:var(--muted)}
+        .card-actions{display:flex;gap:8px;margin-top:auto}
+        .playlist{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;height:fit-content}
+        .playlist-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+        .playlist-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(0,0,0,0.01), transparent);cursor:grab}
+        .player{margin-top:14px;background:linear-gradient(90deg,#fff,#fbfcff);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+        .big-btn{width:40px;height:40px;border-radius:8px;border:0;background:var(--accent);color:#fff;display:inline-grid;place-items:center;cursor:pointer}
+        .small-btn{padding:6px 8px;border-radius:8px;border:1px solid #e6e9ef;background:var(--card);cursor:pointer}
+        .progress{width:100%;height:8px;background:#eef2ff;border-radius:8px;position:relative;cursor:pointer;overflow:hidden}
+        .progress .bar{height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));width:0%}
+        .time{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+        .drop-hint{padding:10px;border-radius:8px;border:1px dashed #e6e9ef;color:var(--muted);text-align:center;font-size:13px;background:linear-gradient(180deg, rgba(255,255,255,0.6), transparent)}
+        .sr-only{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>GitHub 音乐盒</h1>
+<div class="container" id="app">
+    <header>
+        <div>
+            <h1>GitHub 音乐盒 — 直接读取 music/ 文件夹</h1>
+            <div style="font-size:12px;color:var(--muted)">音乐会自动读取仓库 music/ 目录下的音频文件并显示在曲库中。</div>
+        </div>
 
-    <!-- 搜索框 -->
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="输入歌曲名称或关键字搜索..." oninput="filterSongs()">
+        <div class="controls" aria-hidden="false">
+            <div class="search" role="search">
+                <label for="searchInput" class="sr-only">搜索歌曲</label>
+                <input id="searchInput" type="search" placeholder="搜索歌名、关键字..." />
+                <button id="clearBtn" class="btn" title="清空搜索">清除</button>
+            </div>
+
+            <label class="btn" for="fileInput" title="添加本地文件到歌单">添加本地</label>
+            <input id="fileInput" type="file" accept="audio/*" multiple style="display:none"/>
+
+            <button id="saveBtn" class="btn" title="保存当前歌单（仅保存仓库内文件引用）">保存歌单</button>
+        </div>
+    </header>
+
+    <div class="main">
+        <!-- 歌曲库 -->
+        <section>
+            <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;gap:8px;align-items:center">
+                    <strong>歌曲列表</strong>
+                    <small style="color:var(--muted)">（自动读取仓库 music/ 下音频文件）</small>
+                </div>
+                <div style="font-size:13px;color:var(--muted)">共 <span id="songCount">0</span> 首</div>
+            </div>
+
+            <div id="dropZone" class="drop-hint" aria-hidden="false">将本地音频文件拖到此处，或使用“添加本地”按钮</div>
+
+            <div id="songList" class="list" aria-live="polite" style="margin-top:10px"></div>
+
+            <template id="cardTpl">
+                <div class="song-card" role="article">
+                    <div>
+                        <h3 class="song-title"></h3>
+                        <div class="song-meta"></div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn add-btn">加入歌单</button>
+                        <button class="btn" data-action="play">立即播放</button>
+                    </div>
+                </div>
+            </template>
+        </section>
+
+        <!-- 侧边栏：歌单 + 播放器 -->
+        <aside>
+            <div class="playlist" aria-label="我的歌单">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <h2>我的歌单</h2>
+                    <div style="font-size:12px;color:var(--muted)"><span id="playlistCount">0</span></div>
+                </div>
+
+                <ul id="playlist" class="playlist-list" aria-live="polite"></ul>
+
+                <div style="display:flex;gap:8px;margin-top:6px">
+                    <button id="shuffleBtn" class="small-btn" title="随机播放">随机</button>
+                    <button id="repeatBtn" class="small-btn" title="循环模式：关闭">循环：关</button>
+                    <button id="clearPlaylistBtn" class="small-btn" title="清空歌单">清空歌单</button>
+                </div>
+
+                <div class="player" aria-label="播放器">
+                    <div class="top" style="display:flex;justify-content:space-between;align-items:center">
+                        <div>
+                            <div id="nowTitle" style="font-weight:600;font-size:14px;">—</div>
+                            <div id="nowMeta" style="font-size:12px;color:var(--muted)">—</div>
+                        </div>
+                        <div class="controls-row" style="display:flex;gap:8px;align-items:center">
+                            <button id="prevBtn" class="small-btn" title="上一首">◀◀</button>
+                            <button id="playPauseBtn" class="big-btn" title="播放/暂停">▶</button>
+                            <button id="nextBtn" class="small-btn" title="下一首">▶▶</button>
+                        </div>
+                    </div>
+
+                    <div class="progress" id="progress" aria-label="进度条" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div class="bar" id="progressBar"></div>
+                    </div>
+                    <div class="time">
+                        <span id="currentTime">00:00</span>
+                        <span id="totalTime">00:00</span>
+                    </div>
+
+                    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <label for="volume" class="sr-only">音量</label>
+                            <input id="volume" type="range" min="0" max="1" step="0.01" value="1" />
+                        </div>  
+                        <div style="font-size:12px;color:var(--muted)">支持本地文件 + 仓库 music/ 下文件</div>
+                    </div>
+
+                    <audio id="audio" preload="metadata" style="display:none"></audio>
+                </div>
+            </div>
+        </aside>
     </div>
-
-    <!-- 歌曲列表 -->
-    <div class="list" id="songList">
-        <!-- 通过 JavaScript 动态生成 -->
-    </div>
-
-    <!-- 播放列表 -->
-    <div class="playlist">
-        <h2>我的歌单</h2>
-        <ul id="playlist"></ul>
-    </div>
-
-    <!-- 音频播放器 -->
-    <audio id="audioPlayer" controls></audio>
 </div>
 
 <script>
-/* ------------------- 配置区 ------------------- */
-// 请把你的音乐文件放在仓库根目录的 music/ 文件夹下，
-// 按照下面的数组格式列出文件名（不含路径）即可
+/* ================ 配置 =================
+ 如果希望自动从 GitHub 仓库读取 music/ 文件夹，请设置下面 owner/repo。
+ 如果仓库为公开仓库，客户端会使用 GitHub Contents API 获取文件列表并使用 download_url 作为播放源。
+ 如果你更希望手动配置文件名，也可以把 useGithub 设为 false 并填写 musicFiles 数组。
+========================================= */
+const CONFIG = {
+    useGithub: true,        // true = 从 GitHub 读取 music/ 目录；false = 使用下面的 musicFiles 数组
+    owner: 'hwsyyds',       // 仓库 owner
+    repo: 'wang',           // 仓库名
+    branch: '',             // 可选：指定分支（空字符串则自动使用仓库默认分支）
+    path: 'music',          // 要读取的目录
+    allowedExt: ['.mp3','.wav','.ogg','.m4a','.flac'] // 支持的音频后缀（小写）
+};
+
 const musicFiles = [
-    // 示例：'song1.mp3','song2.mp3'
-    // 下面请自行添加你的文件名
+    // 如果 useGithub: false，请在这里写文件名，例如 "song.mp3"
 ];
-/* ------------------------------------------------ */
 
-/* 生成歌曲卡片 */
-function renderSongs() {
-    const list = document.getElementById('songList');
-    list.innerHTML = '';
-    musicFiles.forEach((file, idx) => {
-        const title = file.replace(/\.[^/.]+$/, ''); // 去掉后缀
-        const card = document.createElement('div');
-        card.className = 'song-card';
-        card.dataset.title = title.toLowerCase();
+/* =============== 下面不需要改 =============== */
 
-        card.innerHTML = `
-            <h3>${title}</h3>
-            <button onclick="addToPlaylist(${idx})">加入歌单</button>
-            <button onclick="playNow(${idx})">立即播放</button>
-        `;
-        list.appendChild(card);
-    });
-}
+const STORAGE_KEY = 'hws_music_playlist_v1';
 
-/* 搜索过滤 */
-function filterSongs() {
-    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-    const cards = document.querySelectorAll('.song-card');
-    cards.forEach(card => {
-        const title = card.dataset.title;
-        card.style.display = title.includes(keyword) ? '' : 'none';
-    });
-}
+const app = { library: [], playlist: [], currentIndex: -1, shuffled: false, repeatMode: 0 };
 
-/* 播放音乐 */
-function playNow(index) {
-    const player = document.getElementById('audioPlayer');
-    player.src = `music/${musicFiles[index]}`;
-    player.play();
-}
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 
-/* 歌单管理 */
-let playlist = [];
+/* DOM */
+const songListEl = $('#songList');
+const songCountEl = $('#songCount');
+const playlistEl = $('#playlist');
+const playlistCountEl = $('#playlistCount');
+const audio = $('#audio');
+const playPauseBtn = $('#playPauseBtn');
+const prevBtn = $('#prevBtn');
+const nextBtn = $('#nextBtn');
+const nowTitle = $('#nowTitle');
+const nowMeta = $('#nowMeta');
+const progress = $('#progress');
+const progressBar = $('#progressBar');
+const currentTimeEl = $('#currentTime');
+const totalTimeEl = $('#totalTime');
+const searchInput = $('#searchInput');
+const clearBtn = $('#clearBtn');
+const fileInput = $('#fileInput');
+const dropZone = $('#dropZone');
+const shuffleBtn = $('#shuffleBtn');
+const repeatBtn = $('#repeatBtn');
+const saveBtn = $('#saveBtn');
+const volumeEl = $('#volume');
+const clearPlaylistBtn = $('#clearPlaylistBtn');
 
-function addToPlaylist(index) {
-    const file = musicFiles[index];
-    if (!playlist.includes(file)) {
-        playlist.push(file);
-        renderPlaylist();
-    } else {
-        alert('该歌曲已在歌单中');
+function fmtTime(s){ if(!isFinite(s)||s<0) return '00:00'; const m=Math.floor(s/60).toString().padStart(2,'0'); const sec=Math.floor(s%60).toString().padStart(2,'0'); return `${m}:${sec}`; }
+function uniqId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* -------------------- 从 GitHub 读取 music/ 文件 --------------------
+ 逻辑：
+ 1) 如果 CONFIG.useGithub 且 musicFiles 为空，则通过 GitHub API 获取仓库信息（以确定默认分支）
+ 2) 再请求 /repos/{owner}/{repo}/contents/{path}?ref={branch} 获取文件列表
+ 3) 过滤出允许后缀的文件，并使用 item.download_url 作为 src（该链接指向 raw.githubusercontent.com）
+ 注意：
+ - 仅适用于公开仓库（或在浏览器中带 token，但示例未实现 token）
+ - 受 GitHub API 速率限制（未认证的请求大约每小时 60 次）
+ - 若读取失败，页面会提示并允许手动填写 musicFiles
+------------------------------------------------------------------*/
+async function fetchGithubMusic(){
+    const { owner, repo, path } = CONFIG;
+    let branch = CONFIG.branch && CONFIG.branch.trim() ? CONFIG.branch.trim() : '';
+    try{
+        if(!branch){
+            const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+            if(!repoRes.ok) throw new Error('无法获取仓库信息: ' + repoRes.status);
+            const repoJson = await repoRes.json();
+            branch = repoJson.default_branch || 'main';
+        }
+        const contentsUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+        const res = await fetch(contentsUrl);
+        if(!res.ok) throw new Error('无法读取目录: ' + res.status);
+        const data = await res.json();
+        if(!Array.isArray(data)) throw new Error('目录内容不是数组');
+        const files = data
+            .filter(item => item.type === 'file' && isAllowedExt(item.name))
+            .map(item => ({
+                name: item.name.replace(/\.[^/.]+$/,''),
+                filename: item.name,
+                src: item.download_url,
+                id: `repo_${item.path}`
+            }));
+        return files;
+    }catch(err){
+        console.warn('fetchGithubMusic error', err);
+        return null;
     }
 }
 
-function renderPlaylist() {
-    const ul = document.getElementById('playlist');
-    ul.innerHTML = '';
-    playlist.forEach((file, idx) => {
-        const title = file.replace(/\.[^/.]+$/, '');
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <span>${title}</span>
+function isAllowedExt(name){
+    const lower = name.toLowerCase();
+    return CONFIG.allowedExt.some(ext => lower.endsWith(ext));
+}
+
+/* Build library: either from explicit musicFiles or from GitHub */
+async function buildLibrary(){
+    app.library = [];
+    if(!CONFIG.useGithub){
+        app.library = musicFiles.map(fn => ({
+            name: fn.replace(/\.[^/.]+$/,''),
+            filename: fn,
+            src: `music/${fn}`,
+            id: `repo_${fn}`
+        }));
+        return;
+    }
+
+    // If user provided explicit local musicFiles too, prefer them if present
+    if(Array.isArray(musicFiles) && musicFiles.length > 0){
+        app.library = musicFiles.map(fn => ({
+            name: fn.replace(/\.[^/.]+$/,''),
+            filename: fn,
+            src: `music/${fn}`,
+            id: `repo_${fn}`
+        }));
+        return;
+    }
+
+    const files = await fetchGithubMusic();
+    if(files && files.length){
+        app.library = files;
+    } else {
+        // 失败时给出提示并 leave library empty
+        app.library = [];
+        songListEl.innerHTML = `<div style="padding:12px;color:var(--muted)">无法自动读取仓库的 music/ 目录。请确认仓库为公开、路径正确，或把 useGithub 设为 false 并在脚本中填写 musicFiles 数组。</div>`;
+    }
+}
+
+/* 渲染库 */
+function renderLibrary(filter=''){
+    songListEl.innerHTML = '';
+    const items = app.library.filter(i => i.name.toLowerCase().includes(filter.toLowerCase()));
+    songCountEl.textContent = items.length;
+    const frag = document.createDocumentFragment();
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'song-card';
+        card.innerHTML = `
             <div>
-                <button onclick="playFromPlaylist(${idx})">播放</button>
-                <button onclick="removeFromPlaylist(${idx})">删除</button>
+                <h3 class="song-title" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h3>
+                <div class="song-meta">${escapeHtml(item.filename || '')}</div>
+            </div>
+            <div class="card-actions">
+                <button class="btn add-btn" data-id="${item.id}">加入歌单</button>
+                <button class="btn" data-action="play" data-id="${item.id}">立即播放</button>
             </div>
         `;
-        ul.appendChild(li);
+        frag.appendChild(card);
     });
+    songListEl.appendChild(frag);
 }
 
-function playFromPlaylist(idx) {
-    const player = document.getElementById('audioPlayer');
-    player.src = `music/${playlist[idx]}`;
-    player.play();
-}
-
-function removeFromPlaylist(idx) {
-    playlist.splice(idx, 1);
+/* 歌单管理与播放（与之前版本相同） */
+function addToPlaylistFromLibrary(id){
+    const item = app.library.find(i => i.id === id);
+    if(!item) return;
+    if(app.playlist.some(p => p.src === item.src && p.type === 'repo')){ alert('该歌曲已在歌单中'); return; }
+    const entry = { id: uniqId(), name: item.name, src: item.src, type: 'repo', filename: item.filename };
+    app.playlist.push(entry);
+    savePlaylistToStorage();
     renderPlaylist();
+}
+function addLocalFiles(files){ Array.from(files).forEach(f => { if(!f.type.startsWith('audio')) return; const url = URL.createObjectURL(f); app.playlist.push({ id: uniqId(), name: f.name.replace(/\.[^/.]+$/,''), src: url, type:'local', fileObj: f }); }); renderPlaylist(); }
+function renderPlaylist(){ playlistEl.innerHTML=''; const frag=document.createDocumentFragment(); app.playlist.forEach((p,idx)=>{ const li=document.createElement('li'); li.className='playlist-item'; li.draggable=true; li.dataset.index=idx; li.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:center;min-width:0">
+            <div style="width:6px;height:6px;border-radius:50%;background:${p.type==='local'?'#0ea5a4':'#3b82f6'}"></div>
+            <div>
+                <div class="title" title="${escapeHtml(p.name)}" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(p.name)}</div>
+                <div style="font-size:11px;color:var(--muted)">${p.type==='local' ? '本地文件' : (p.filename||'')}</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+            <button class="small-btn" data-action="play" data-idx="${idx}">播放</button>
+            <button class="small-btn" data-action="remove" data-idx="${idx}">删除</button>
+        </div>
+        `; if(idx===app.currentIndex) li.style.background='linear-gradient(90deg, rgba(37,99,235,0.06), rgba(14,165,164,0.02))'; frag.appendChild(li); }); playlistEl.appendChild(frag); playlistCountEl.textContent = app.playlist.length; }
+
+function playAtIndex(index){
+    if(index<0||index>=app.playlist.length) return;
+    const p = app.playlist[index];
+    app.currentIndex = index;
+    audio.src = p.src;
+    audio.play().catch(()=>{});
+    updateNowPlayingUI(p);
+    renderPlaylist();
+}
+function updateNowPlayingUI(p){ nowTitle.textContent = p? p.name : '—'; nowMeta.textContent = p && p.type==='repo' ? (p.filename||'') : (p && p.type==='local' ? '本地文件' : ''); playPauseBtn.textContent = audio.paused ? '▶' : '❚❚'; }
+function removeFromPlaylist(idx){ const wasCurrent = (idx === app.currentIndex); const removed = app.playlist.splice(idx,1); if(removed[0] && removed[0].type === 'local' && removed[0].src){ try{ URL.revokeObjectURL(removed[0].src);}catch(e){} } if(wasCurrent){ app.currentIndex = -1; audio.pause(); audio.removeAttribute('src'); updateNowPlayingUI(null); } else if(idx < app.currentIndex){ app.currentIndex -= 1; } savePlaylistToStorage(); renderPlaylist(); }
+
+function savePlaylistToStorage(){
+    try{
+        const toSave = app.playlist.filter(p => p.type === 'repo').map(p => ({ filename: p.filename }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }catch(e){ console.warn('保存歌单失败',e); }
+}
+function loadPlaylistFromStorage(){
+    try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const arr = JSON.parse(raw);
+        arr.forEach(item => {
+            const fn = item.filename;
+            if(!fn) return;
+            const libItem = app.library.find(l => l.filename === fn);
+            if(libItem){
+                app.playlist.push({ id: uniqId(), name: libItem.name, src: libItem.src, type:'repo', filename: libItem.filename });
+            }
+        });
+    }catch(e){ console.warn('加载歌单失败',e); }
+}
+
+function playNext(forward=true){
+    if(app.playlist.length===0) return;
+    if(app.repeatMode===2){ playAtIndex(app.currentIndex); return; }
+    if(app.shuffled){ const nextIdx = Math.floor(Math.random()*app.playlist.length); playAtIndex(nextIdx); return; }
+    let idx = app.currentIndex;
+    if(idx===-1){ playAtIndex(0); return; }
+    idx = forward? idx+1 : idx-1;
+    if(idx>=app.playlist.length){ if(app.repeatMode===1) idx = 0; else { audio.pause(); return; } }
+    if(idx<0){ if(app.repeatMode===1) idx = app.playlist.length-1; else { audio.pause(); return; } }
+    playAtIndex(idx);
+}
+
+function bindEvents(){
+    songListEl.addEventListener('click', e => {
+        const id = e.target.closest('[data-id]')?.dataset.id;
+        if(e.target.classList.contains('add-btn') && id) addToPlaylistFromLibrary(id);
+        else if(e.target.dataset.action === 'play' && id){
+            const libItem = app.library.find(i => i.id === id);
+            if(libItem){ const temp = { id: uniqId(), name: libItem.name, src: libItem.src, type:'repo', filename: libItem.filename }; app.playlist.push(temp); savePlaylistToStorage(); renderPlaylist(); playAtIndex(app.playlist.length-1); }
+        }
+    });
+
+    playlistEl.addEventListener('click', e => {
+        const action = e.target.dataset.action;
+        const idx = Number(e.target.dataset.idx);
+        if(action==='play') playAtIndex(idx);
+        if(action==='remove') removeFromPlaylist(idx);
+    });
+
+    // 拖拽排序
+    let dragSrcIdx = null;
+    playlistEl.addEventListener('dragstart', e => { const li = e.target.closest('.playlist-item'); if(!li) return; dragSrcIdx = Number(li.dataset.index); li.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    playlistEl.addEventListener('dragend', e => { $$('.playlist-item').forEach(i=>i.classList.remove('dragging')); dragSrcIdx = null; });
+    playlistEl.addEventListener('dragover', e => { e.preventDefault(); const over = e.target.closest('.playlist-item'); if(!over) return; const overIdx = Number(over.dataset.index); if(dragSrcIdx === null || dragSrcIdx === overIdx) return; const [moved] = app.playlist.splice(dragSrcIdx,1); app.playlist.splice(overIdx,0,moved); dragSrcIdx = overIdx; renderPlaylist(); });
+
+    playPauseBtn.addEventListener('click', ()=>{ if(audio.paused) audio.play(); else audio.pause(); });
+    prevBtn.addEventListener('click', ()=>playNext(false));
+    nextBtn.addEventListener('click', ()=>playNext(true));
+
+    audio.addEventListener('play', ()=>playPauseBtn.textContent='❚❚');
+    audio.addEventListener('pause', ()=>playPauseBtn.textContent='▶');
+    audio.addEventListener('timeupdate', ()=>{ const cur = audio.currentTime||0; const dur = audio.duration||0; const pct = dur ? (cur/dur)*100 : 0; progressBar.style.width = pct + '%'; currentTimeEl.textContent = fmtTime(cur); totalTimeEl.textContent = fmtTime(dur); progress.setAttribute('aria-valuenow', Math.round(pct)); });
+    audio.addEventListener('ended', ()=>playNext(true));
+    audio.addEventListener('loadedmetadata', ()=>{ totalTimeEl.textContent = fmtTime(audio.duration||0); });
+    audio.addEventListener('error', ()=>{ alert('播放出错，可能是文件路径或格式问题'); });
+
+    progress.addEventListener('click', e => { const rect = progress.getBoundingClientRect(); const x = e.clientX - rect.left; const pct = Math.max(0, Math.min(1, x/rect.width)); if(isFinite(audio.duration)) audio.currentTime = pct * audio.duration; });
+
+    let searchTimer = null;
+    searchInput.addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(()=>{ renderLibrary(e.target.value.trim()); }, 200); });
+    clearBtn.addEventListener('click', ()=>{ searchInput.value=''; renderLibrary(''); });
+
+    fileInput.addEventListener('change', e => { if(e.target.files && e.target.files.length){ addLocalFiles(e.target.files); fileInput.value=''; } });
+
+    ['dragenter','dragover'].forEach(ev => { dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.style.borderColor='#c7d2fe'; dropZone.style.background='#fff'; }); });
+    ['dragleave','drop'].forEach(ev => { dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.style.borderColor=''; dropZone.style.background=''; }); });
+    dropZone.addEventListener('drop', e => { const dt = e.dataTransfer; if(dt && dt.files && dt.files.length){ addLocalFiles(dt.files); } });
+
+    shuffleBtn.addEventListener('click', ()=>{ app.shuffled = !app.shuffled; shuffleBtn.style.background = app.shuffled ? 'linear-gradient(90deg,var(--accent),#3b82f6)' : ''; shuffleBtn.style.color = app.shuffled ? '#fff' : ''; });  
+    repeatBtn.addEventListener('click', ()=>{ app.repeatMode = (app.repeatMode + 1) % 3; const map = ['循环：关','循环：全部','循环：单曲']; repeatBtn.textContent = map[app.repeatMode]; repeatBtn.title='循环模式'; });
+
+    saveBtn.addEventListener('click', ()=>{ savePlaylistToStorage(); alert('歌单已保存（仅保存仓库内文件引用）'); });
+
+    clearPlaylistBtn.addEventListener('click', ()=>{ if(!confirm('确定要清空歌单吗？')) return; app.playlist.forEach(p=>{ if(p.type==='local') try{ URL.revokeObjectURL(p.src);}catch(e){} }); app.playlist=[]; app.currentIndex=-1; audio.pause(); audio.removeAttribute('src'); savePlaylistToStorage(); renderPlaylist(); });
+
+    window.addEventListener('keydown', e => { if(e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA') return; if(e.code==='Space'){ e.preventDefault(); if(audio.paused) audio.play(); else audio.pause(); } if(e.code==='ArrowRight'){ audio.currentTime = Math.min(audio.duration||0, audio.currentTime + 5); } if(e.code==='ArrowLeft'){ audio.currentTime = Math.max(0, audio.currentTime - 5); } });
+
+    // 点击库内的立即播放/加入功能委托已在 songListEl click 处理
 }
 
 /* 初始化 */
-document.addEventListener('DOMContentLoaded', () => {
-    if (musicFiles.length === 0) {
-        document.getElementById('songList').innerHTML = '<p style="color:#777;">请在脚本顶部的 <code>musicFiles</code> 数组中填写你的 MP3 文件名。</p>';
-    } else {
-        renderSongs();
-    }
-});
+async function init(){
+    await buildLibrary();
+    renderLibrary();
+    loadPlaylistFromStorage();
+    renderPlaylist();
+    bindEvents();
+    audio.volume = Number(volumeEl.value);
+    volumeEl.addEventListener('input', e => { audio.volume = Number(e.target.value); });
+}
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
