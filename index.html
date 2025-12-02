@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>hws的GitHub 音乐盒</title>
+    <style>
+        body {font-family: Arial, Helvetica, sans-serif; margin:0; padding:0; background:#f5f5f5;}
+        .container {max-width:960px; margin:auto; padding:20px;}
+        h1 {text-align:center; color:#333;}
+        .search-box {margin-bottom:20px; text-align:center;}
+        .search-box input {width:80%; padding:8px; font-size:16px;}
+        .list {display:flex; flex-wrap:wrap; gap:15px;}
+        .song-card {background:#fff; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,.1);
+                    width:calc(33% - 10px); padding:10px; box-sizing:border-box;}
+        .song-card h3 {margin:0 0 5px; font-size:16px; color:#222; word-break:break-all;}
+        .song-card button {margin-top:5px; padding:5px 10px; font-size:14px;}
+        .playlist {margin-top:30px; background:#fff; padding:15px; border-radius:6px;}
+        .playlist h2 {margin-top:0;}
+        .playlist ul {list-style:none; padding:0; margin:0;}
+        .playlist li {padding:8px 0; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;}
+        .playlist li button {font-size:12px; padding:3px 6px;}
+        audio {width:100%; margin-top:20px;}
+        @media (max-width:768px){
+            .song-card{width:calc(50% - 10px);}
+        }
+        @media (max-width:480px){
+            .song-card{width:100%;}
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>GitHub 音乐盒</h1>
+
+    <!-- 搜索框 -->
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="输入歌曲名称或关键字搜索..." oninput="filterSongs()">
+    </div>
+
+    <!-- 歌曲列表 -->
+    <div class="list" id="songList">
+        <!-- 通过 JavaScript 动态生成 -->
+    </div>
+
+    <!-- 播放列表 -->
+    <div class="playlist">
+        <h2>我的歌单</h2>
+        <ul id="playlist"></ul>
+    </div>
+
+    <!-- 音频播放器 -->
+    <audio id="audioPlayer" controls></audio>
+</div>
+
+<script>
+/* ------------------- 配置区 ------------------- */
+// 请把你的音乐文件放在仓库根目录的 music/ 文件夹下，
+// 按照下面的数组格式列出文件名（不含路径）即可
+const musicFiles = [
+    // 示例：'song1.mp3','song2.mp3'
+    // 下面请自行添加你的文件名
+];
+/* ------------------------------------------------ */
+
+/* 生成歌曲卡片 */
+function renderSongs() {
+    const list = document.getElementById('songList');
+    list.innerHTML = '';
+    musicFiles.forEach((file, idx) => {
+        const title = file.replace(/\.[^/.]+$/, ''); // 去掉后缀
+        const card = document.createElement('div');
+        card.className = 'song-card';
+        card.dataset.title = title.toLowerCase();
+
+        card.innerHTML = `
+            <h3>${title}</h3>
+            <button onclick="addToPlaylist(${idx})">加入歌单</button>
+            <button onclick="playNow(${idx})">立即播放</button>
+        `;
+        list.appendChild(card);
+    });
+}
+
+/* 搜索过滤 */
+function filterSongs() {
+    const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+    const cards = document.querySelectorAll('.song-card');
+    cards.forEach(card => {
+        const title = card.dataset.title;
+        card.style.display = title.includes(keyword) ? '' : 'none';
+    });
+}
+
+/* 播放音乐 */
+function playNow(index) {
+    const player = document.getElementById('audioPlayer');
+    player.src = `music/${musicFiles[index]}`;
+    player.play();
+}
+
+/* 歌单管理 */
+let playlist = [];
+
+function addToPlaylist(index) {
+    const file = musicFiles[index];
+    if (!playlist.includes(file)) {
+        playlist.push(file);
+        renderPlaylist();
+    } else {
+        alert('该歌曲已在歌单中');
+    }
+}
+
+function renderPlaylist() {
+    const ul = document.getElementById('playlist');
+    ul.innerHTML = '';
+    playlist.forEach((file, idx) => {
+        const title = file.replace(/\.[^/.]+$/, '');
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span>${title}</span>
+            <div>
+                <button onclick="playFromPlaylist(${idx})">播放</button>
+                <button onclick="removeFromPlaylist(${idx})">删除</button>
+            </div>
+        `;
+        ul.appendChild(li);
+    });
+}
+
+function playFromPlaylist(idx) {
+    const player = document.getElementById('audioPlayer');
+    player.src = `music/${playlist[idx]}`;
+    player.play();
+}
+
+function removeFromPlaylist(idx) {
+    playlist.splice(idx, 1);
+    renderPlaylist();
+}
+
+/* 初始化 */
+document.addEventListener('DOMContentLoaded', () => {
+    if (musicFiles.length === 0) {
+        document.getElementById('songList').innerHTML = '<p style="color:#777;">请在脚本顶部的 <code>musicFiles</code> 数组中填写你的 MP3 文件名。</p>';
+    } else {
+        renderSongs();
+    }
+});
+</script>
+</body>
+</html>
